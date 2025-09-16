@@ -8,10 +8,10 @@ from streamlit_folium import st_folium
 # =========================
 # Streamlit - Input params
 # =========================
-st.title("GPS Filtering")
+st.title("GPS Filtering (Speed-based)")
 
 st.sidebar.header("Parameters")
-GPS_ERROR_THRESHOLD = st.sidebar.number_input("Kalman Filter Threshold (m)", 1, 1000, 100)
+GPS_ERROR_THRESHOLD = st.sidebar.number_input("Kalman Filter Threshold (m/s)", 0.1, 100, 10.0, step=0.1)
 MIN_SATELLITES = st.sidebar.number_input("Min Satellites", 1, 12, 4)
 P_INITIAL = 500
 R_MEASUREMENT = 5
@@ -23,13 +23,13 @@ MIN_ALT = st.sidebar.number_input("Min Altitude", -100, 10000, 0)
 MAX_ALT = st.sidebar.number_input("Max Altitude", 0, 10000, 2500)
 SPEED_IGN = st.sidebar.number_input("Speed w Ignition", 0, 1, 1)
 
-uploaded_file = st.file_uploader("upload CSV", type="csv")
+uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file, parse_dates=["Fixtime UTC"])
     df = df.sort_values("Fixtime UTC").reset_index(drop=True)
 
-    # Conversie lat/lon -> x/y
+    # Lat/Lon -> x/y
     R = 6371000
     lat0 = np.radians(df["Latitude"].iloc[0])
     lon0 = np.radians(df["Longitude"].iloc[0])
@@ -53,6 +53,9 @@ if uploaded_file is not None:
         dt = (row["Fixtime UTC"] - last_time).total_seconds()
         last_time = row["Fixtime UTC"]
 
+        if dt <= 0:
+            dt = 1  # elkerüljük a nulla osztást
+
         kf.F = np.array([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]])
         z = np.array([row["x"], row["y"]])
         kf.predict()
@@ -61,14 +64,17 @@ if uploaded_file is not None:
         x_filtered.append(kf.x[0])
         y_filtered.append(kf.x[1])
 
+        # Residual speed [m/s]
         residual = z - (kf.H @ kf.x)
-        error = np.linalg.norm(residual)
+        error_speed = np.linalg.norm(residual) / dt
+
+        # Speed/ignition check
         if row["Speed"] != 0 and row["Custom Ignition (io409)"] == 0 and SPEED_IGN == 1:
             speed_ing_error = True
         else:
             speed_ing_error = False
 
-        HDOP = 0
+        # HDOP
         try:
             HDOP = row["HDOP raw (io300)"]
         except:
@@ -76,11 +82,11 @@ if uploaded_file is not None:
 
         valid.append(
             row["Satelites (sat)"] >= MIN_SATELLITES and
-            error <= GPS_ERROR_THRESHOLD and
+            error_speed <= GPS_ERROR_THRESHOLD and
             MIN_HDOP < HDOP < MAX_HDOP and
             row["Speed"] < MAX_SPEED and
             MIN_ALT < row["Altitude"] < MAX_ALT and
-            speed_ing_error is False
+            not speed_ing_error
         )
 
     df["valid"] = valid
