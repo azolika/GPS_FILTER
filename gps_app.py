@@ -15,10 +15,10 @@ st.sidebar.header("Parameters")
 # Threshold (m/s) → float mindenhol
 GPS_ERROR_THRESHOLD = st.sidebar.number_input(
     "Kalman Filter Threshold (m/s)",
-    min_value=1,
-    max_value=100,
-    value=10,
-    step=1
+    min_value=1.0,
+    max_value=100.0,
+    value=10.0,
+    step=1.0
 )
 
 # Minimum satellites → int mindenhol
@@ -84,6 +84,7 @@ SPEED_IGN = st.sidebar.number_input(
     step=1
 )
 
+# Max altitude change speed [m/s]
 MAX_ALT_SPEED = st.sidebar.number_input(
     "Max Altitude Change Speed (m/s)",
     min_value=0.1,
@@ -117,22 +118,22 @@ if uploaded_file is not None:
     x_filtered = []
     y_filtered = []
     last_time = df["Fixtime UTC"].iloc[0]
-
     last_alt = None
 
     for i, row in df.iterrows():
         dt = (row["Fixtime UTC"] - last_time).total_seconds()
         if dt <= 0:
             dt = 1  # elkerüljük a nulla osztást
-
         last_time = row["Fixtime UTC"]
 
+        # Magasságváltozás sebesség
         if last_alt is None:
             alt_speed = 0
         else:
             alt_speed = abs(row["Altitude"] - last_alt) / dt
         last_alt = row["Altitude"]
 
+        # Kalman update
         kf.F = np.array([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]])
         z = np.array([row["x"], row["y"]])
         kf.predict()
@@ -184,9 +185,30 @@ if uploaded_file is not None:
     # Filtered route
     folium.PolyLine(df[df["valid"]][["lat_filtered","lon_filtered"]].values.tolist(), color="blue", weight=3, opacity=0.7, tooltip="Filtered").add_to(m)
 
-    # Invalid points
+    # Invalid points with tooltip
     for i, row in df[~df["valid"]].iterrows():
-        folium.CircleMarker([row["lat_filtered"], row["lon_filtered"]], radius=4, color="yellow", fill=True, fill_opacity=0.9).add_to(m)
+        try:
+            HDOP = row["HDOP raw (io300)"]
+        except:
+            HDOP = row["HDOP (hdop)"]
+
+        tooltip_text = (
+            f"Time: {row['Fixtime UTC']}\n"
+            f"Satellites: {row['Satelites (sat)']}\n"
+            f"Speed: {row['Speed']} km/h\n"
+            f"Ignition: {row['Custom Ignition (io409)']}\n"
+            f"Altitude: {row['Altitude']} m\n"
+            f"HDOP: {HDOP}"
+        )
+
+        folium.CircleMarker(
+            [row["lat_filtered"], row["lon_filtered"]],
+            radius=4,
+            color="yellow",
+            fill=True,
+            fill_opacity=0.9,
+            tooltip=tooltip_text
+        ).add_to(m)
 
     # Start & End
     folium.Marker(df[["Latitude","Longitude"]].values[0], popup="Start", icon=folium.Icon(color="green")).add_to(m)
