@@ -15,10 +15,10 @@ st.sidebar.header("Parameters")
 # Threshold (m/s) → float mindenhol
 GPS_ERROR_THRESHOLD = st.sidebar.number_input(
     "Kalman Filter Threshold (m/s)",
-    min_value=0.1,
+    min_value=1,
     max_value=100.0,
     value=10.0,
-    step=0.1
+    step=1
 )
 
 # Minimum satellites → int mindenhol
@@ -84,6 +84,14 @@ SPEED_IGN = st.sidebar.number_input(
     step=1
 )
 
+MAX_ALT_SPEED = st.sidebar.number_input(
+    "Max Altitude Change Speed (m/s)",
+    min_value=0.1,
+    max_value=50.0,
+    value=5.0,
+    step=0.1
+)
+
 uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
 if uploaded_file is not None:
@@ -110,11 +118,20 @@ if uploaded_file is not None:
     y_filtered = []
     last_time = df["Fixtime UTC"].iloc[0]
 
+    last_alt = None
+
     for i, row in df.iterrows():
         dt = (row["Fixtime UTC"] - last_time).total_seconds()
         if dt <= 0:
             dt = 1  # elkerüljük a nulla osztást
+
         last_time = row["Fixtime UTC"]
+
+        if last_alt is None:
+            alt_speed = 0
+        else:
+            alt_speed = abs(row["Altitude"] - last_alt) / dt
+        last_alt = row["Altitude"]
 
         kf.F = np.array([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]])
         z = np.array([row["x"], row["y"]])
@@ -127,6 +144,9 @@ if uploaded_file is not None:
         # Residual speed [m/s]
         residual = z - (kf.H @ kf.x)
         error_speed = np.linalg.norm(residual) / dt
+
+        # Altitude check
+        alt_speed_error = alt_speed > MAX_ALT_SPEED
 
         # Speed/ignition check
         speed_ing_error = row["Speed"] != 0 and row["Custom Ignition (io409)"] == 0 and SPEED_IGN == 1
@@ -143,7 +163,8 @@ if uploaded_file is not None:
             MIN_HDOP < HDOP < MAX_HDOP and
             row["Speed"] < MAX_SPEED and
             MIN_ALT < row["Altitude"] < MAX_ALT and
-            not speed_ing_error
+            not speed_ing_error and
+            not alt_speed_error
         )
 
     df["valid"] = valid
@@ -172,4 +193,4 @@ if uploaded_file is not None:
     folium.Marker(df[["Latitude","Longitude"]].values[-1], popup="End", icon=folium.Icon(color="red")).add_to(m)
 
     st.subheader("Maps")
-    st_data = st_folium(m, width=800, height=600)
+    st_data = st_folium(m, width=700, height=500)
