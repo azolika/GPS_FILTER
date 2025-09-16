@@ -7,7 +7,9 @@ from filterpy.kalman import KalmanFilter
 import folium
 from streamlit_folium import st_folium
 
-
+# =========================
+# CSS to resize iframe
+# =========================
 st.markdown(
     """
     <style>
@@ -21,12 +23,13 @@ st.markdown(
 )
 
 # =========================
-# Streamlit - Input params
+# Streamlit - Input parameters
 # =========================
 st.title("GPS Filtering (Speed-based)")
 
 st.sidebar.header("Parameters")
 
+# Kalman filter threshold in m/s
 GPS_ERROR_THRESHOLD = st.sidebar.number_input(
     "Kalman Filter Threshold (m/s)",
     min_value=1.0,
@@ -35,6 +38,7 @@ GPS_ERROR_THRESHOLD = st.sidebar.number_input(
     step=1.0
 )
 
+# Minimum satellites
 MIN_SATELLITES = st.sidebar.number_input(
     "Min Satellites",
     min_value=1,
@@ -43,10 +47,12 @@ MIN_SATELLITES = st.sidebar.number_input(
     step=1
 )
 
+# Kalman filter constants
 P_INITIAL = 500
 R_MEASUREMENT = 5
 Q_PROCESS = 0.1
 
+# HDOP limits
 MIN_HDOP = st.sidebar.number_input(
     "Min HDOP",
     min_value=0.0,
@@ -62,6 +68,7 @@ MAX_HDOP = st.sidebar.number_input(
     step=0.1
 )
 
+# Maximum speed
 MAX_SPEED = st.sidebar.number_input(
     "Max Speed",
     min_value=0,
@@ -70,6 +77,7 @@ MAX_SPEED = st.sidebar.number_input(
     step=1
 )
 
+# Altitude limits
 MIN_ALT = st.sidebar.number_input(
     "Min Altitude",
     min_value=-100,
@@ -85,6 +93,7 @@ MAX_ALT = st.sidebar.number_input(
     step=1
 )
 
+# Speed with ignition
 SPEED_IGN = st.sidebar.number_input(
     "Speed w Ignition",
     min_value=0,
@@ -93,6 +102,7 @@ SPEED_IGN = st.sidebar.number_input(
     step=1
 )
 
+# Maximum altitude change speed
 MAX_ALT_SPEED = st.sidebar.number_input(
     "Max Altitude Change Speed (m/s)",
     min_value=0.1,
@@ -101,9 +111,13 @@ MAX_ALT_SPEED = st.sidebar.number_input(
     step=0.1
 )
 
+# Display options
 show_original = st.sidebar.checkbox("Original path", value=True)
 show_filtered = st.sidebar.checkbox("Filtered path", value=True)
 
+# =========================
+# File uploader
+# =========================
 uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
 if uploaded_file is not None:
@@ -120,16 +134,21 @@ if uploaded_file is not None:
         st.error(f"CSV Read error: {e}")
         st.stop()
 
+    # Sort by time
     df = df.sort_values("Fixtime UTC").reset_index(drop=True)
 
-    # Lat/Lon -> x/y
+    # =========================
+    # Convert lat/lon to x/y in meters
+    # =========================
     R = 6371000
     lat0 = np.radians(df["Latitude"].iloc[0])
     lon0 = np.radians(df["Longitude"].iloc[0])
     df["x"] = (np.radians(df["Longitude"]) - lon0) * np.cos(lat0) * R
     df["y"] = (np.radians(df["Latitude"]) - lat0) * R
 
-    # Kalman Filter init
+    # =========================
+    # Initialize Kalman Filter
+    # =========================
     kf = KalmanFilter(dim_x=4, dim_z=2)
     kf.H = np.array([[1,0,0,0],[0,1,0,0]])
     kf.P *= P_INITIAL
@@ -143,6 +162,9 @@ if uploaded_file is not None:
     last_time = df["Fixtime UTC"].iloc[0]
     last_alt = None
 
+    # =========================
+    # Apply Kalman Filter and validity checks
+    # =========================
     for i, row in df.iterrows():
         dt = (row["Fixtime UTC"] - last_time).total_seconds()
         if dt <= 0:
@@ -163,17 +185,21 @@ if uploaded_file is not None:
         x_filtered.append(kf.x[0])
         y_filtered.append(kf.x[1])
 
+        # Residual speed in m/s
         residual = z - (kf.H @ kf.x)
         error_speed = np.linalg.norm(residual) / dt
 
+        # Check altitude change speed and ignition
         alt_speed_error = alt_speed > MAX_ALT_SPEED
         speed_ing_error = row["Speed"] != 0 and row.get("Custom Ignition (io409)", 0) == 0 and SPEED_IGN == 1
 
+        # HDOP value
         try:
             HDOP = row["HDOP raw (io300)"]
         except Exception:
             HDOP = row.get("HDOP (hdop)", np.nan)
 
+        # Determine validity
         valid.append(
             row["Satelites (sat)"] >= MIN_SATELLITES and
             error_speed <= GPS_ERROR_THRESHOLD and
@@ -190,31 +216,19 @@ if uploaded_file is not None:
     df["lat_filtered"] = np.degrees(df["y_filtered"] / R + lat0)
     df["lon_filtered"] = np.degrees(df["x_filtered"] / (R * np.cos(lat0)) + lon0)
 
-    # ===== Map state init =====
-    # számoljuk a bounds-ot az összes eredeti pont alapján
+    # =========================
+    # Create Folium map with bounds fit
+    # =========================
     bounds = [
         [df["Latitude"].min(), df["Longitude"].min()],
         [df["Latitude"].max(), df["Longitude"].max()]
     ]
+    mid_lat = (bounds[0][0] + bounds[1][0]) / 2.0
+    mid_lon = (bounds[0][1] + bounds[1][1]) / 2.0
+    m = folium.Map(location=[mid_lat, mid_lon], zoom_start=12)
+    m.fit_bounds(bounds)  # Fit to all points
 
-    if "map_state" not in st.session_state:
-        st.session_state.map_state = {
-            "center": None,
-            "zoom": None,
-            "bounds": bounds,
-            "auto_fit_done": True
-        }
-    else:
-        # ha új CSV-t töltöttél (más bounds), frissítjük a bounds-ot, de ne írjuk felül a felhasználói center/zoom-ot
-        st.session_state.map_state["bounds"] = bounds
-
-    if st.session_state.map_state.get("center") and st.session_state.map_state.get("zoom") is not None:
-        m = folium.Map(location=st.session_state.map_state["center"], zoom_start=st.session_state.map_state["zoom"])
-    else:
-        mid_lat = (bounds[0][0] + bounds[1][0]) / 2.0
-        mid_lon = (bounds[0][1] + bounds[1][1]) / 2.0
-        m = folium.Map(location=[mid_lat, mid_lon], zoom_start=12)
-
+    # Original path
     if show_original:
         folium.PolyLine(
             df[["Latitude", "Longitude"]].values.tolist(),
@@ -224,8 +238,8 @@ if uploaded_file is not None:
             tooltip=folium.Tooltip("Original", sticky=False)
         ).add_to(m)
 
+    # Filtered path
     if show_filtered:
-        # ha nincs érvényes pont, ne próbáljuk megrajzolni
         filt_coords = df[df["valid"]][["lat_filtered", "lon_filtered"]].values.tolist()
         if len(filt_coords) > 1:
             folium.PolyLine(
@@ -236,15 +250,9 @@ if uploaded_file is not None:
                 tooltip=folium.Tooltip("Filtered", sticky=False)
             ).add_to(m)
 
-    # Invalid points with HTML tooltip (and prev altitude)
+    # Invalid points
     for i, row in df[~df["valid"]].iterrows():
-        try:
-            HDOP = row["HDOP raw (io300)"]
-        except Exception:
-            HDOP = row.get("HDOP (hdop)", "")
-
         prev_alt = df.loc[i - 1, "Altitude"] if i > 0 else None
-
         tooltip_text = (
             f"<b>Time:</b> {row['Fixtime UTC']}<br>"
             f"<b>Satellites:</b> {row['Satelites (sat)']}<br>"
@@ -252,9 +260,8 @@ if uploaded_file is not None:
             f"<b>Ignition:</b> {row.get('Custom Ignition (io409)', '')}<br>"
             f"<b>Altitude:</b> {row['Altitude']} m<br>"
             f"<b>Prev Altitude:</b> {prev_alt if prev_alt is not None else '-'} m<br>"
-            f"<b>HDOP:</b> {HDOP}"
+            f"<b>HDOP:</b> {row.get('HDOP raw (io300)', row.get('HDOP (hdop)', ''))}"
         )
-
         folium.CircleMarker(
             [row["lat_filtered"], row["lon_filtered"]],
             radius=4,
@@ -264,20 +271,9 @@ if uploaded_file is not None:
             tooltip=folium.Tooltip(tooltip_text, sticky=True, parse_html=True)
         ).add_to(m)
 
-    # Start & End
+    # Start & End markers
     folium.Marker([df["Latitude"].iloc[0], df["Longitude"].iloc[0]], popup="Start", icon=folium.Icon(color="green")).add_to(m)
     folium.Marker([df["Latitude"].iloc[-1], df["Longitude"].iloc[-1]], popup="End", icon=folium.Icon(color="red")).add_to(m)
 
-
-    if st.session_state.map_state.get("bounds") and not st.session_state.map_state.get("auto_fit_done"):
-        try:
-            m.fit_bounds(st.session_state.map_state["bounds"])
-            st.session_state.map_state["auto_fit_done"] = True
-        except Exception:
-            b = [[df["Latitude"].min(), df["Longitude"].min()], [df["Latitude"].max(), df["Longitude"].max()]]
-            m.fit_bounds(b)
-            st.session_state.map_state["auto_fit_done"] = True
-
     st.subheader("Maps")
     st_data = st_folium(m, width=1200, height=700)
-
