@@ -11,11 +11,11 @@ from streamlit_folium import st_folium
 st.title("GPS Filtering")
 
 st.sidebar.header("Parameters")
-GPS_ERROR_THRESHOLD = st.sidebar.number_input("GPS Error Threshold (m)", 1, 1000, 100)
+GPS_ERROR_THRESHOLD = st.sidebar.number_input("Kalman Filter Threshold (m)", 1, 1000, 100)
 MIN_SATELLITES = st.sidebar.number_input("Min Satellites", 1, 12, 4)
-P_INITIAL = st.sidebar.number_input("P Initial", 1.0, 10000.0, 500.0)
-R_MEASUREMENT = st.sidebar.number_input("R Measurement", 0.1, 100.0, 5.0)
-Q_PROCESS = st.sidebar.number_input("Q Process", 0.0001, 1.0, 0.01)
+P_INITIAL = 500
+R_MEASUREMENT = 5
+Q_PROCESS = 0.1
 MIN_HDOP = st.sidebar.number_input("Min HDOP", 0.0, 10.0, 0.1)
 MAX_HDOP = st.sidebar.number_input("Max HDOP", 0.0, 10.0, 2.0)
 MAX_SPEED = st.sidebar.number_input("Max Speed", 0, 500, 140)
