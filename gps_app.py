@@ -220,4 +220,4 @@ if uploaded_file is not None:
     folium.Marker(df[["Latitude","Longitude"]].values[-1], popup="End", icon=folium.Icon(color="red")).add_to(m)
 
     st.subheader("Maps")
-    st_data = st_folium(m, width=700, height=500)
+    st_data = st_folium(m, height=800, width=None)
