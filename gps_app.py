@@ -67,10 +67,18 @@ if uploaded_file is not None:
             speed_ing_error = True
         else:
             speed_ing_error = False
+
+        HDOP = 0
+        try:
+            HDOP == row["HDOP raw (io300)"]
+        except:
+            HDOP == row["HDOP (hdop)"]
+        else:
+            HDOP == row["HDOP raw (io300)"]
         valid.append(
             row["Satelites (sat)"] >= MIN_SATELLITES and
             error <= GPS_ERROR_THRESHOLD and
-            MIN_HDOP < row["HDOP raw (io300)"] < MAX_HDOP and
+            MIN_HDOP < HDOP < MAX_HDOP and
             row["Speed"] < MAX_SPEED and
             MIN_ALT < row["Altitude"] < MAX_ALT and
             speed_ing_error is False
