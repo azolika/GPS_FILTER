@@ -121,20 +121,21 @@ show_filtered = st.sidebar.checkbox("Filtered path", value=True)
 uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
 if uploaded_file is not None:
-    try:
-        df = pd.read_csv(
-            uploaded_file,
-            parse_dates=["Fixtime UTC"],
-            skip_blank_lines=True
-        )
-        if "Fixtime UTC" not in df.columns:
-            uploaded_file.seek(0)
-            df = pd.read_csv(uploaded_file, parse_dates=["Fixtime UTC"], skiprows=1)
-    except Exception as e:
-        st.error(f"CSV Read error: {e}")
+    content = uploaded_file.read().decode('utf-8')
+    lines = content.splitlines()
+
+    header_row = None
+    for i, line in enumerate(lines):
+        if "Fixtime UTC" in line and "Latitude" in line and "Longitude" in line:
+            header_row = i
+            break
+
+    if header_row is None:
+        st.error("Nem található megfelelő header a CSV-ben")
         st.stop()
 
-    # Sort by time
+    uploaded_file.seek(0)  # reset file pointer
+    df = pd.read_csv(uploaded_file, header=header_row, parse_dates=["Fixtime UTC"])
     df = df.sort_values("Fixtime UTC").reset_index(drop=True)
 
     # =========================
