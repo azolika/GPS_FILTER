@@ -7,7 +7,7 @@ from filterpy.kalman import KalmanFilter
 import folium
 from streamlit_folium import st_folium
 
-# CSS: erőltetjük az iframe szélességét/magasságát
+
 st.markdown(
     """
     <style>
@@ -107,7 +107,6 @@ show_filtered = st.sidebar.checkbox("Filtered path", value=True)
 uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
 if uploaded_file is not None:
-    # read CSV — ha a header rossz, megpróbáljuk skiprows=1-el
     try:
         df = pd.read_csv(
             uploaded_file,
@@ -118,7 +117,7 @@ if uploaded_file is not None:
             uploaded_file.seek(0)
             df = pd.read_csv(uploaded_file, parse_dates=["Fixtime UTC"], skiprows=1)
     except Exception as e:
-        st.error(f"Hiba a CSV beolvasásakor: {e}")
+        st.error(f"CSV Read error: {e}")
         st.stop()
 
     df = df.sort_values("Fixtime UTC").reset_index(drop=True)
