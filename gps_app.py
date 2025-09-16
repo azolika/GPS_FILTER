@@ -92,6 +92,8 @@ MAX_ALT_SPEED = st.sidebar.number_input(
     value=5.0,
     step=0.1
 )
+show_original = st.sidebar.checkbox("Mutasd az eredeti vonalat", value=True)
+show_filtered = st.sidebar.checkbox("Mutasd a szűrt vonalat", value=True)
 
 uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
@@ -193,11 +195,24 @@ if uploaded_file is not None:
     center_lon = df["Longitude"].iloc[0]
     m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
 
-    # Original route
-    folium.PolyLine(df[["Latitude","Longitude"]].values.tolist(), color="red", weight=3, opacity=0.7, tooltip="Original").add_to(m)
+    if show_original:
+        folium.PolyLine(
+            df[["Latitude", "Longitude"]].values.tolist(),
+            color="red",
+            weight=3,
+            opacity=0.7,
+            tooltip="Original"
+        ).add_to(m)
 
-    # Filtered route
-    folium.PolyLine(df[df["valid"]][["lat_filtered","lon_filtered"]].values.tolist(), color="blue", weight=3, opacity=0.7, tooltip="Filtered").add_to(m)
+    # Filtered route (kék)
+    if show_filtered:
+        folium.PolyLine(
+            df[df["valid"]][["lat_filtered", "lon_filtered"]].values.tolist(),
+            color="blue",
+            weight=3,
+            opacity=0.7,
+            tooltip="Filtered"
+        ).add_to(m)
 
     # Invalid points with tooltip
     for i, row in df[~df["valid"]].iterrows():
