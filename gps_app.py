@@ -203,22 +203,19 @@ if uploaded_file is not None:
             "center": None,
             "zoom": None,
             "bounds": bounds,
-            "auto_fit_done": False
+            "auto_fit_done": True
         }
     else:
         # ha új CSV-t töltöttél (más bounds), frissítjük a bounds-ot, de ne írjuk felül a felhasználói center/zoom-ot
         st.session_state.map_state["bounds"] = bounds
 
-    # ===== Create map: ha van elmentett center+zoom használjuk, különben középre és később fit_bounds =====
     if st.session_state.map_state.get("center") and st.session_state.map_state.get("zoom") is not None:
         m = folium.Map(location=st.session_state.map_state["center"], zoom_start=st.session_state.map_state["zoom"])
     else:
-        # középre állítás a bounding box közepére
         mid_lat = (bounds[0][0] + bounds[1][0]) / 2.0
         mid_lon = (bounds[0][1] + bounds[1][1]) / 2.0
         m = folium.Map(location=[mid_lat, mid_lon], zoom_start=12)
 
-    # Polylines (checkboxok alapján)
     if show_original:
         folium.PolyLine(
             df[["Latitude", "Longitude"]].values.tolist(),
@@ -272,18 +269,16 @@ if uploaded_file is not None:
     folium.Marker([df["Latitude"].iloc[0], df["Longitude"].iloc[0]], popup="Start", icon=folium.Icon(color="green")).add_to(m)
     folium.Marker([df["Latitude"].iloc[-1], df["Longitude"].iloc[-1]], popup="End", icon=folium.Icon(color="red")).add_to(m)
 
-    # Ha még nem futott le az auto-fit, alkalmazzuk a bounds-ot egyszer (első betöltés)
+
     if st.session_state.map_state.get("bounds") and not st.session_state.map_state.get("auto_fit_done"):
         try:
             m.fit_bounds(st.session_state.map_state["bounds"])
             st.session_state.map_state["auto_fit_done"] = True
         except Exception:
-            # fallback: ha valamiért nem jó a bounds formátum
             b = [[df["Latitude"].min(), df["Longitude"].min()], [df["Latitude"].max(), df["Longitude"].max()]]
             m.fit_bounds(b)
             st.session_state.map_state["auto_fit_done"] = True
 
-    # Megjelenítés (széles)
     st.subheader("Maps")
     st_data = st_folium(m, width=1200, height=700)
 
