@@ -11,17 +11,78 @@ from streamlit_folium import st_folium
 st.title("GPS Filtering (Speed-based)")
 
 st.sidebar.header("Parameters")
-GPS_ERROR_THRESHOLD = st.sidebar.number_input("Kalman Filter Threshold (m/s)", 0.1, 100, 10.0, step=0.1)
-MIN_SATELLITES = st.sidebar.number_input("Min Satellites", 1, 12, 4)
+
+# Threshold (m/s) → float mindenhol
+GPS_ERROR_THRESHOLD = st.sidebar.number_input(
+    "Kalman Filter Threshold (m/s)",
+    min_value=0.1,
+    max_value=100.0,
+    value=10.0,
+    step=0.1
+)
+
+# Minimum satellites → int mindenhol
+MIN_SATELLITES = st.sidebar.number_input(
+    "Min Satellites",
+    min_value=1,
+    max_value=12,
+    value=4,
+    step=1
+)
+
 P_INITIAL = 500
 R_MEASUREMENT = 5
 Q_PROCESS = 0.1
-MIN_HDOP = st.sidebar.number_input("Min HDOP", 0.0, 10.0, 0.1)
-MAX_HDOP = st.sidebar.number_input("Max HDOP", 0.0, 10.0, 2.0)
-MAX_SPEED = st.sidebar.number_input("Max Speed", 0, 500, 130)
-MIN_ALT = st.sidebar.number_input("Min Altitude", -100, 10000, 0)
-MAX_ALT = st.sidebar.number_input("Max Altitude", 0, 10000, 2500)
-SPEED_IGN = st.sidebar.number_input("Speed w Ignition", 0, 1, 1)
+
+# HDOP → float mindenhol
+MIN_HDOP = st.sidebar.number_input(
+    "Min HDOP",
+    min_value=0.0,
+    max_value=10.0,
+    value=0.1,
+    step=0.1
+)
+MAX_HDOP = st.sidebar.number_input(
+    "Max HDOP",
+    min_value=0.0,
+    max_value=10.0,
+    value=2.0,
+    step=0.1
+)
+
+# Speed → int
+MAX_SPEED = st.sidebar.number_input(
+    "Max Speed",
+    min_value=0,
+    max_value=500,
+    value=130,
+    step=1
+)
+
+# Altitude → int
+MIN_ALT = st.sidebar.number_input(
+    "Min Altitude",
+    min_value=-100,
+    max_value=10000,
+    value=0,
+    step=1
+)
+MAX_ALT = st.sidebar.number_input(
+    "Max Altitude",
+    min_value=0,
+    max_value=10000,
+    value=2500,
+    step=1
+)
+
+# Speed w Ignition → int
+SPEED_IGN = st.sidebar.number_input(
+    "Speed w Ignition",
+    min_value=0,
+    max_value=1,
+    value=1,
+    step=1
+)
 
 uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
@@ -51,10 +112,9 @@ if uploaded_file is not None:
 
     for i, row in df.iterrows():
         dt = (row["Fixtime UTC"] - last_time).total_seconds()
-        last_time = row["Fixtime UTC"]
-
         if dt <= 0:
             dt = 1  # elkerüljük a nulla osztást
+        last_time = row["Fixtime UTC"]
 
         kf.F = np.array([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]])
         z = np.array([row["x"], row["y"]])
@@ -69,10 +129,7 @@ if uploaded_file is not None:
         error_speed = np.linalg.norm(residual) / dt
 
         # Speed/ignition check
-        if row["Speed"] != 0 and row["Custom Ignition (io409)"] == 0 and SPEED_IGN == 1:
-            speed_ing_error = True
-        else:
-            speed_ing_error = False
+        speed_ing_error = row["Speed"] != 0 and row["Custom Ignition (io409)"] == 0 and SPEED_IGN == 1
 
         # HDOP
         try:
@@ -115,4 +172,4 @@ if uploaded_file is not None:
     folium.Marker(df[["Latitude","Longitude"]].values[-1], popup="End", icon=folium.Icon(color="red")).add_to(m)
 
     st.subheader("Maps")
-    st_data = st_folium(m, width=700, height=500)
+    st_data = st_folium(m, width=800, height=600)
