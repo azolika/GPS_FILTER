@@ -92,8 +92,8 @@ MAX_ALT_SPEED = st.sidebar.number_input(
     value=5.0,
     step=0.1
 )
-show_original = st.sidebar.checkbox("Mutasd az eredeti vonalat", value=True)
-show_filtered = st.sidebar.checkbox("Mutasd a szűrt vonalat", value=True)
+show_original = st.sidebar.checkbox("Orginal line", value=True)
+show_filtered = st.sidebar.checkbox("Filtered", value=True)
 
 uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
