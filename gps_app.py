@@ -6,11 +6,11 @@ import folium
 from streamlit_folium import st_folium
 
 # =========================
-# Streamlit - Input paraméterek
+# Streamlit - Input params
 # =========================
-st.title("GPS Szűrés és Kalman Filter Web App")
+st.title("GPS Filtering")
 
-st.sidebar.header("Paraméterek")
+st.sidebar.header("Parameters")
 GPS_ERROR_THRESHOLD = st.sidebar.number_input("GPS Error Threshold (m)", 1, 1000, 100)
 MIN_SATELLITES = st.sidebar.number_input("Min Satellites", 1, 12, 4)
 P_INITIAL = st.sidebar.number_input("P Initial", 1.0, 10000.0, 500.0)
@@ -22,13 +22,13 @@ MAX_SPEED = st.sidebar.number_input("Max Speed", 0, 500, 140)
 MIN_ALT = st.sidebar.number_input("Min Altitude", -100, 10000, 0)
 MAX_ALT = st.sidebar.number_input("Max Altitude", 0, 10000, 2500)
 
-uploaded_file = st.file_uploader("CSV feltöltése", type="csv")
+uploaded_file = st.file_uploader("upload CSV", type="csv")
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file, parse_dates=["Fixtime UTC"])
     df = df.sort_values("Fixtime UTC").reset_index(drop=True)
 
-    # Konverzió lat/lon -> x/y
+    # Conversie lat/lon -> x/y
     R = 6371000
     lat0 = np.radians(df["Latitude"].iloc[0])
     lon0 = np.radians(df["Longitude"].iloc[0])
@@ -76,7 +76,7 @@ if uploaded_file is not None:
     df["lat_filtered"] = np.degrees(df["y_filtered"] / R + lat0)
     df["lon_filtered"] = np.degrees(df["x_filtered"] / (R * np.cos(lat0)) + lon0)
 
-    # Folium térkép
+    # Folium map
     center_lat = df["Latitude"].iloc[0]
     center_lon = df["Longitude"].iloc[0]
     m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
@@ -95,5 +95,5 @@ if uploaded_file is not None:
     folium.Marker(df[["Latitude","Longitude"]].values[0], popup="Start", icon=folium.Icon(color="green")).add_to(m)
     folium.Marker(df[["Latitude","Longitude"]].values[-1], popup="End", icon=folium.Icon(color="red")).add_to(m)
 
-    st.subheader("Térkép")
+    st.subheader("Maps")
     st_data = st_folium(m, width=700, height=500)
