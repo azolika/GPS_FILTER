@@ -1,0 +1,6 @@
+streamlit==1.49.1
+pandas
+numpy
+filterpy
+folium
+streamlit-folium

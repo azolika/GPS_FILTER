@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  gps_app:
+    build: .
+    ports:
+      - "9500:9500"
+    volumes:
+      - ./data:/app/data   # ide teheted a CSV fájlokat
+    environment:
+      - STREAMLIT_SERVER_PORT=9500
+      - STREAMLIT_SERVER_HEADLESS=true
+    command: >
+      streamlit run gps_app.py
+      --server.port=9500
+      --server.address=0.0.0.0
+      --server.headless=true
