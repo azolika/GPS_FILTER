@@ -287,11 +287,3 @@ if uploaded_file is not None:
     st.subheader("Maps")
     st_data = st_folium(m, width=1200, height=700)
 
-    # Frissítjük a session_state-et a felhasználói interakció alapján (ha van)
-    if st_data:
-        if st_data.get("center"):
-            st.session_state.map_state["center"] = st_data["center"]
-        if st_data.get("zoom") is not None:
-            st.session_state.map_state["zoom"] = st_data["zoom"]
-        if st_data.get("bounds"):
-            st.session_state.map_state["bounds"] = st_data["bounds"]
