@@ -16,8 +16,8 @@ st.sidebar.header("Parameters")
 GPS_ERROR_THRESHOLD = st.sidebar.number_input(
     "Kalman Filter Threshold (m/s)",
     min_value=1,
-    max_value=100.0,
-    value=10.0,
+    max_value=100,
+    value=10,
     step=1
 )
 
