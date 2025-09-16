@@ -21,7 +21,7 @@ MAX_HDOP = st.sidebar.number_input("Max HDOP", 0.0, 10.0, 2.0)
 MAX_SPEED = st.sidebar.number_input("Max Speed", 0, 500, 140)
 MIN_ALT = st.sidebar.number_input("Min Altitude", -100, 10000, 0)
 MAX_ALT = st.sidebar.number_input("Max Altitude", 0, 10000, 2500)
-SPEED_IGN = st.sidebar.number_input("Speed validation (IGN)", 0, 1, 1)
+SPEED_IGN = st.sidebar.number_input("Speed w Ignition", 0, 1, 1)
 
 uploaded_file = st.file_uploader("upload CSV", type="csv")
 
