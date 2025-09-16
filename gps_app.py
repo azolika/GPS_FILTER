@@ -192,13 +192,18 @@ if uploaded_file is not None:
         except:
             HDOP = row["HDOP (hdop)"]
 
+        prev_alt = None
+        if i > 0:
+            prev_alt = df.loc[i - 1, "Altitude"]
+
         tooltip_text = (
-            f"Time: {row['Fixtime UTC']}\n"
-            f"Satellites: {row['Satelites (sat)']}\n"
-            f"Speed: {row['Speed']} km/h\n"
-            f"Ignition: {row['Custom Ignition (io409)']}\n"
-            f"Altitude: {row['Altitude']} m\n"
-            f"HDOP: {HDOP}"
+            f"<b>Time:</b> {row['Fixtime UTC']}<br>"
+            f"<b>Satellites:</b> {row['Satelites (sat)']}<br>"
+            f"<b>Speed:</b> {row['Speed']} km/h<br>"
+            f"<b>Ignition:</b> {row['Custom Ignition (io409)']}<br>"
+            f"<b>Altitude:</b> {row['Altitude']} m<br>"
+            f"<b>Prev Altitude:</b> {prev_alt if prev_alt is not None else '-'} m<br>"
+            f"<b>HDOP:</b> {HDOP}"
         )
 
         folium.CircleMarker(
