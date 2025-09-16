@@ -21,6 +21,7 @@ MAX_HDOP = st.sidebar.number_input("Max HDOP", 0.0, 10.0, 2.0)
 MAX_SPEED = st.sidebar.number_input("Max Speed", 0, 500, 140)
 MIN_ALT = st.sidebar.number_input("Min Altitude", -100, 10000, 0)
 MAX_ALT = st.sidebar.number_input("Max Altitude", 0, 10000, 2500)
+SPEED_IGN = st.sidebar.number_input("Speed validation (IGN)", 1, 0, 1)
 
 uploaded_file = st.file_uploader("upload CSV", type="csv")
 
@@ -62,12 +63,17 @@ if uploaded_file is not None:
 
         residual = z - (kf.H @ kf.x)
         error = np.linalg.norm(residual)
+        if row["Speed"] != 0 and row["Custom Ignition (io409)"] == 0 and SPEED_IGN == 1:
+            speed_ing_error = True
+        else:
+            speed_ing_error = False
         valid.append(
             row["Satelites (sat)"] >= MIN_SATELLITES and
             error <= GPS_ERROR_THRESHOLD and
             MIN_HDOP < row["HDOP raw (io300)"] < MAX_HDOP and
             row["Speed"] < MAX_SPEED and
-            MIN_ALT < row["Altitude"] < MAX_ALT
+            MIN_ALT < row["Altitude"] < MAX_ALT and
+            speed_ing_error is False
         )
 
     df["valid"] = valid
