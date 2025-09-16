@@ -92,8 +92,8 @@ MAX_ALT_SPEED = st.sidebar.number_input(
     value=5.0,
     step=0.1
 )
-show_original = st.sidebar.checkbox("Orginal line", value=True)
-show_filtered = st.sidebar.checkbox("Filtered", value=True)
+show_original = st.sidebar.checkbox("Original path", value=True)
+show_filtered = st.sidebar.checkbox("Filtered path", value=True)
 
 uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
@@ -190,10 +190,19 @@ if uploaded_file is not None:
     df["lat_filtered"] = np.degrees(df["y_filtered"] / R + lat0)
     df["lon_filtered"] = np.degrees(df["x_filtered"] / (R * np.cos(lat0)) + lon0)
 
+
     # Folium map
-    center_lat = df["Latitude"].iloc[0]
-    center_lon = df["Longitude"].iloc[0]
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
+    if "map_state" not in st.session_state:
+        st.session_state.map_state = {
+            "center": [df["Latitude"].iloc[0], df["Longitude"].iloc[0]],
+            "zoom": 12,
+            "bounds": None
+        }
+
+    m = folium.Map(
+        location=st.session_state.map_state["center"],
+        zoom_start=st.session_state.map_state["zoom"]
+    )
 
     if show_original:
         folium.PolyLine(
@@ -255,3 +264,11 @@ if uploaded_file is not None:
         height=600,
         returned_objects=[]
     )
+
+    if st_data:
+        if "center" in st_data and st_data["center"]:
+            st.session_state.map_state["center"] = st_data["center"]
+        if "zoom" in st_data and st_data["zoom"]:
+            st.session_state.map_state["zoom"] = st_data["zoom"]
+        if "bounds" in st_data and st_data["bounds"]:
+            st.session_state.map_state["bounds"] = st_data["bounds"]
