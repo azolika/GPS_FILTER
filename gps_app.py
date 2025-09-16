@@ -70,11 +70,10 @@ if uploaded_file is not None:
 
         HDOP = 0
         try:
-            HDOP == row["HDOP raw (io300)"]
+            HDOP = row["HDOP raw (io300)"]
         except:
-            HDOP == row["HDOP (hdop)"]
-        else:
-            HDOP == row["HDOP raw (io300)"]
+            HDOP = row["HDOP (hdop)"]
+
         valid.append(
             row["Satelites (sat)"] >= MIN_SATELLITES and
             error <= GPS_ERROR_THRESHOLD and
