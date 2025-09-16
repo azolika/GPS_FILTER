@@ -196,7 +196,7 @@ if uploaded_file is not None:
         st.session_state.map_state = {
             "center": [df["Latitude"].iloc[0], df["Longitude"].iloc[0]],
             "zoom": 12,
-            "bounds": None
+            "bounds": 'fit_bounds'
         }
 
     m = folium.Map(
