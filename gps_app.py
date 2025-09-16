@@ -131,7 +131,7 @@ if uploaded_file is not None:
             break
 
     if header_row is None:
-        st.error("Nem található megfelelő header a CSV-ben")
+        st.error("CSV error")
         st.stop()
 
     uploaded_file.seek(0)  # reset file pointer
