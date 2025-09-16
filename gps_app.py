@@ -95,8 +95,22 @@ MAX_ALT_SPEED = st.sidebar.number_input(
 
 uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
+
 if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file, parse_dates=["Fixtime UTC"])
+
+    df = pd.read_csv(
+        uploaded_file,
+        parse_dates=["Fixtime UTC"],
+        skip_blank_lines=True
+    )
+
+    if "Fixtime UTC" not in df.columns:
+        uploaded_file.seek(0)  # visszaállítjuk a fájl pointert
+        df = pd.read_csv(
+            uploaded_file,
+            parse_dates=["Fixtime UTC"],
+            skiprows=1
+        )
     df = df.sort_values("Fixtime UTC").reset_index(drop=True)
 
     # Lat/Lon -> x/y
@@ -220,4 +234,9 @@ if uploaded_file is not None:
     folium.Marker(df[["Latitude","Longitude"]].values[-1], popup="End", icon=folium.Icon(color="red")).add_to(m)
 
     st.subheader("Maps")
-    st_data = st_folium(m, width=1200, height=600)
+    st_data = st_folium(
+        m,
+        width=1200,
+        height=600,
+        returned_objects=[]
+    )
